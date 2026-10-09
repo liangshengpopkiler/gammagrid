@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from app import metrics, theme
+from app import i18n, metrics, theme
 
 # Label and sentence per state. The label is what the eye lands on; the
 # sentence is what makes it mean something the first time it is read.
@@ -43,6 +43,36 @@ WEATHER_WORDS = {
         "Negative gamma and no boundary nearby — dealer hedging amplifies moves.",
     ),
 }
+
+# Bilingual fork: same five states, Chinese read. `words()` picks the active
+# language; upstream's ENGLISH dict stays untouched as the canonical key set.
+WEATHER_WORDS_ZH = {
+    metrics.WEATHER_CLEAR: (
+        "晴朗",
+        "正 Gamma 且距离翻转位很远 — 做市商对冲正在抑制波动。",
+    ),
+    metrics.WEATHER_FAIR: (
+        "平稳",
+        "正 Gamma,但翻转位已在射程之内 — 抑制效果未必守得住。",
+    ),
+    metrics.WEATHER_UNSETTLED: (
+        "不稳",
+        "价格正压在 Gamma 翻转位上 — 体制向哪个方向走都有可能。",
+    ),
+    metrics.WEATHER_RAIN: (
+        "阵雨",
+        "负 Gamma,好在翻转位不远 — 眼下波动被放大。",
+    ),
+    metrics.WEATHER_STORM: (
+        "风暴",
+        "负 Gamma 且附近没有边界 — 做市商对冲放大波动。",
+    ),
+}
+
+
+def words():
+    """The label/sentence table for the active session language."""
+    return WEATHER_WORDS_ZH if i18n.is_zh() else WEATHER_WORDS
 
 
 def format_gex(value: float | None, signed: bool = True) -> str:
@@ -82,20 +112,23 @@ def describe(weather: dict, latest_moment=None) -> dict:
     one the rest of the page is showing, the page has to be able to say so
     instead of quietly mixing two moments.
     """
-    label, sentence = WEATHER_WORDS[weather["state"]]
+    label, sentence = words()[weather["state"]]
     scope = ""
     if weather.get("expiry_count") and weather.get("horizon_dte") is not None:
         n = int(weather["expiry_count"])
-        scope = f"next {int(weather['horizon_dte'])} days · {n} {'expiry' if n == 1 else 'expiries'}"
+        scope = i18n.t(
+            f"next {int(weather['horizon_dte'])} days · {n} {'expiry' if n == 1 else 'expiries'}",
+            f"未来 {int(weather['horizon_dte'])} 天 · {n} 个到期日",
+        )
     if weather["gamma_flip"] is None:
-        sentence = (
+        sentence = i18n.t(
             "This chain has no gamma flip inside its strike range, so only the sign of "
-            "gamma is known — "
-            + (
-                "positive, hedging damps moves."
-                if weather["net_gex"] >= 0
-                else "negative, hedging amplifies moves."
-            )
+            "gamma is known — ",
+            "该链的行权价范围内不存在 Gamma 翻转位,因此只能判断 Gamma 的符号 — ",
+        ) + (
+            i18n.t("positive, hedging damps moves.", "为正,对冲抑制波动。")
+            if weather["net_gex"] >= 0
+            else i18n.t("negative, hedging amplifies moves.", "为负,对冲放大波动。")
         )
     earlier = (
         latest_moment is not None
@@ -177,33 +210,34 @@ def panel(reading: dict, latest_moment=None) -> str:
     words = describe(reading, latest_moment=latest_moment)
     flip = reading.get("gamma_flip")
     levels = [
-        _level("Price", f"{reading['underlying_price']:,.2f}"),
+        _level(i18n.t("Price", "价格"), f"{reading['underlying_price']:,.2f}"),
         _level("Net GEX", format_gex(reading["net_gex"]),
                "gg-green" if reading["net_gex"] >= 0 else "gg-purple"),
     ]
     if reading.get("call_wall") is not None:
-        levels.append(_level("Call wall", f"{reading['call_wall']:,.2f}", "gg-green"))
+        levels.append(_level(i18n.t("Call wall", "Call 墙"), f"{reading['call_wall']:,.2f}", "gg-green"))
     if reading.get("put_wall") is not None:
-        levels.append(_level("Put wall", f"{reading['put_wall']:,.2f}", "gg-purple"))
+        levels.append(_level(i18n.t("Put wall", "Put 墙"), f"{reading['put_wall']:,.2f}", "gg-purple"))
     levels.append(_level(
-        "Gamma flip",
+        i18n.t("Gamma flip", "Gamma 翻转"),
         "—" if flip is None else f"{flip:,.2f}",
         "",
     ))
     if flip is not None:
-        levels.append(_level("Distance", f"{reading['flip_distance_pct']:.1f}%"))
+        levels.append(_level(i18n.t("Distance", "距离"), f"{reading['flip_distance_pct']:.1f}%"))
 
     art = _ART.get(reading["state"], "")
     scope = f" · {words['scope']}" if words["scope"] else ""
     stale = ""
     if words["from_earlier_moment"]:
-        stale = " · from an earlier collection than the rest of this screen"
+        stale = i18n.t(" · from an earlier collection than the rest of this screen",
+                       " · 来自早于本页其余内容的采集")
     return (
         '<div class="gg-weather">'
         f'<svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">{art}</svg>'
         '<div class="gg-weather-words">'
         f'<div class="gg-weather-label">{words["label"]}'
-        f'<span class="gg-weather-scope"> · gamma weather{scope}{stale}</span></div>'
+        f'<span class="gg-weather-scope"> · {i18n.t("gamma weather", "Gamma 天气")}{scope}{stale}</span></div>'
         f'<div class="gg-weather-sentence">{words["sentence"]}</div>'
         "</div>"
         f'<dl class="gg-levels">{"".join(levels)}</dl>'

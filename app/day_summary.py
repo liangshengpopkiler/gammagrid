@@ -39,7 +39,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from app import config, market_calendar, metrics, metrics_core, weather
+from app import config, i18n, market_calendar, metrics, metrics_core, weather
 
 log = logging.getLogger("day_summary")
 
@@ -277,7 +277,7 @@ def changes(
     # Weather: a word, coloured by which way the regime moved.
     before_state, after_state = prev.get("state"), current.get("state")
     state = {
-        "key": "state", "label": "Gamma weather", "before": before_state, "after": after_state,
+        "key": "state", "label": i18n.t("Gamma weather", "Gamma 天气"), "before": before_state, "after": after_state,
         "unit": "state", "delta": None, "delta_pct": None, "strikes": None, "kind": UNKNOWN,
     }
     if before_state is not None and after_state is not None:
@@ -286,7 +286,7 @@ def changes(
     lines.append(state)
 
     lines.append(_number_change(
-        "price", "Price", prev.get("underlying_price"), current.get("underlying_price"), unit="price",
+        "price", i18n.t("Price", "价格"), prev.get("underlying_price"), current.get("underlying_price"), unit="price",
     ))
 
     net = _number_change("net_gex", "Net GEX", prev.get("net_gex"), current.get("net_gex"), unit="gex")
@@ -295,15 +295,15 @@ def changes(
     lines.append(net)
 
     lines.append(_number_change(
-        "call_wall", "Call wall", prev.get("call_wall"), current.get("call_wall"),
+        "call_wall", i18n.t("Call wall", "Call 墙"), prev.get("call_wall"), current.get("call_wall"),
         unit="strikes", step=step,
     ))
     lines.append(_number_change(
-        "put_wall", "Put wall", prev.get("put_wall"), current.get("put_wall"),
+        "put_wall", i18n.t("Put wall", "Put 墙"), prev.get("put_wall"), current.get("put_wall"),
         unit="strikes", step=step,
     ))
     lines.append(_number_change(
-        "gamma_flip", "Gamma flip", prev.get("gamma_flip"), current.get("gamma_flip"), unit="price",
+        "gamma_flip", i18n.t("Gamma flip", "Gamma 翻转"), prev.get("gamma_flip"), current.get("gamma_flip"), unit="price",
     ))
 
     # Max pain: comparable only for the same expiry, so a nearest expiry that
@@ -315,17 +315,19 @@ def changes(
     else:
         pain_before = previous_same_expiry_pain
     pain = _number_change(
-        "max_pain", f"Max pain · {c_exp}" if c_exp else "Max pain",
+        "max_pain",
+        i18n.t(f"Max pain · {c_exp}", f"最大痛点 · {c_exp}") if c_exp else i18n.t("Max pain", "最大痛点"),
         pain_before, current.get("nearest_max_pain"), unit="strikes", step=step,
     )
     if previous and p_exp is not None and not same_expiry:
         if pain_before is None:
             pain["kind"] = NEW if c_exp is not None else GONE
-        pain["note"] = f"nearest expiry was {p_exp}"
+        pain["note"] = i18n.t(f"nearest expiry was {p_exp}", f"当时最近到期为 {p_exp}")
     lines.append(pain)
 
     move = {
-        "key": "expected_move", "label": f"Expected move · {c_exp}" if c_exp else "Expected move",
+        "key": "expected_move",
+        "label": i18n.t(f"Expected move · {c_exp}", f"预期波动 · {c_exp}") if c_exp else i18n.t("Expected move", "预期波动"),
         "before": _band(prev) if same_expiry else None, "after": _band(current), "unit": "band",
         "delta": None, "delta_pct": None, "strikes": None, "kind": UNKNOWN,
     }
@@ -337,24 +339,24 @@ def changes(
     lines.append(move)
 
     lines.append(_number_change(
-        "pcr_volume", "Put/Call · volume",
+        "pcr_volume", i18n.t("Put/Call · volume", "Put/Call · 成交量"),
         _ratio(p_roll.get("put_volume"), p_roll.get("call_volume")),
         _ratio(c_roll.get("put_volume"), c_roll.get("call_volume")), unit="ratio",
     ))
     lines.append(_number_change(
-        "pcr_oi", "Put/Call · open interest",
+        "pcr_oi", i18n.t("Put/Call · open interest", "Put/Call · 持仓量"),
         _ratio(p_roll.get("put_oi"), p_roll.get("call_oi")),
         _ratio(c_roll.get("put_oi"), c_roll.get("call_oi")), unit="ratio",
     ))
     lines.append(_number_change(
-        "iv", "IV · volume-weighted",
+        "iv", i18n.t("IV · volume-weighted", "IV · 成交量加权"),
         p_roll.get("iv_weighted_avg"), c_roll.get("iv_weighted_avg"), unit="pts",
     ))
     lines.append(_number_change(
-        "call_oi", "Open interest · calls", p_roll.get("call_oi"), c_roll.get("call_oi"), unit="pct",
+        "call_oi", i18n.t("Open interest · calls", "持仓量 · Call"), p_roll.get("call_oi"), c_roll.get("call_oi"), unit="pct",
     ))
     lines.append(_number_change(
-        "put_oi", "Open interest · puts", p_roll.get("put_oi"), c_roll.get("put_oi"), unit="pct",
+        "put_oi", i18n.t("Open interest · puts", "持仓量 · Put"), p_roll.get("put_oi"), c_roll.get("put_oi"), unit="pct",
     ))
 
     # The chain's shape: expiries that rolled off and ones newly listed, named
@@ -362,14 +364,14 @@ def changes(
     before_list = list(prev.get("expiries") or [])
     after_list = list(current.get("expiries") or [])
     shape = _number_change(
-        "expiries", "Expiries listed",
+        "expiries", i18n.t("Expiries listed", "挂牌到期数"),
         len(before_list) if previous else None, len(after_list), unit="count",
     )
     shape["rolled_off"] = [e for e in before_list if e not in after_list]
     shape["listed"] = [e for e in after_list if e not in before_list]
     lines.append(shape)
     lines.append(_number_change(
-        "contracts", "Contracts in the chain", prev.get("contracts"), current.get("contracts"), unit="count",
+        "contracts", i18n.t("Contracts in the chain", "链上合约数"), prev.get("contracts"), current.get("contracts"), unit="count",
     ))
 
     if previous is None:
@@ -394,11 +396,17 @@ def headline(lines: list[dict]) -> str:
     by_key = {line["key"]: line for line in lines}
     state = by_key["state"]
     if state["kind"] in (DAMPING, AMPLIFYING):
-        return f"Gamma weather turned from {_word(state['before'])} to {_word(state['after'])}."
+        return i18n.t(
+            f"Gamma weather turned from {_word(state['before'])} to {_word(state['after'])}.",
+            f"Gamma 天气由“{_word(state['before'])}”转为“{_word(state['after'])}”。",
+        )
     net = by_key["net_gex"]
     if net["kind"] in (DAMPING, AMPLIFYING):
-        return "Net gamma changed sign: dealer hedging now " + (
-            "damps moves." if net["kind"] == DAMPING else "amplifies moves."
+        return i18n.t(
+            "Net gamma changed sign: dealer hedging now " + (
+                "damps moves." if net["kind"] == DAMPING else "amplifies moves."
+            ),
+            "净 Gamma 变号:做市商对冲现在" + ("抑制波动。" if net["kind"] == DAMPING else "放大波动。"),
         )
     moved = [
         line["label"].split(" · ")[0].lower()
@@ -406,14 +414,16 @@ def headline(lines: list[dict]) -> str:
         if line["key"] in ("call_wall", "put_wall", "max_pain") and line["kind"] == MOVED
     ]
     if moved:
-        return "Levels moved: " + ", ".join(moved) + "."
+        return i18n.t("Levels moved: " + ", ".join(moved) + ".",
+                      "关键位移动:" + "、".join(moved) + "。")
     if state["kind"] == SAME:
-        return f"Same weather as the day before ({_word(state['after'])}); the levels held."
-    return "First day on record — nothing to compare yet."
+        return i18n.t(f"Same weather as the day before ({_word(state['after'])}); the levels held.",
+                      f"与前一日同样的天气({_word(state['after'])});关键位保持不变。")
+    return i18n.t("First day on record — nothing to compare yet.", "有记录的第一天 — 尚无可比较对象。")
 
 
 def _word(state: str | None) -> str:
-    words = weather.WEATHER_WORDS
+    words = weather.words()
     return words[state][0].lower() if state in words else str(state)
 
 
@@ -433,7 +443,7 @@ def format_value(line: dict, side: str) -> str:
         return "—"
     unit = line["unit"]
     if unit == "state":
-        words = weather.WEATHER_WORDS
+        words = weather.words()
         return words[value][0] if value in words else str(value)
     if unit == "band":
         return f"{value[0]:,.2f} – {value[1]:,.2f}"
@@ -463,13 +473,13 @@ def format_delta(line: dict) -> str:
     if kind == UNKNOWN:
         return "—"
     if kind == GONE:
-        return "gone"
+        return i18n.t("gone", "已消失")
     if kind == NEW:
-        return "new"
+        return i18n.t("new", "新增")
     if kind == SAME:
-        return "unchanged"
+        return i18n.t("unchanged", "不变")
     if unit == "state":
-        return "amplifying" if kind == AMPLIFYING else "damping"
+        return i18n.t("amplifying", "放大中") if kind == AMPLIFYING else i18n.t("damping", "抑制中")
     delta = line.get("delta")
     if delta is None:
         return ""
@@ -478,7 +488,7 @@ def format_delta(line: dict) -> str:
     # moved in the fourth decimal reads "+0.00" next to two identical numbers,
     # which asks the reader to find a difference that is not there.
     if _is_zero(printed):
-        return "unchanged"
+        return i18n.t("unchanged", "不变")
     return printed
 
 
@@ -494,10 +504,9 @@ def _printed_delta(line: dict, delta: float, unit: str) -> str:
     if unit == "strikes" and line.get("strikes") is not None:
         strikes = line["strikes"]
         whole = int(strikes) if float(strikes).is_integer() else strikes
-        plural = "" if abs(float(strikes)) == 1 else "s"
-        return f"{whole:+g} strike{plural} · {delta:+,.2f}"
+        return f"{whole:+g}" + i18n.t(" strike", " 档") + f" · {delta:+,.2f}"
     if unit == "band":
-        return f"{delta:+,.2f} wide"
+        return f"{delta:+,.2f}" + i18n.t(" wide", " (宽度)")
     if unit in ("count",):
         return f"{int(delta):+,}"
     if unit == "pct" and line.get("delta_pct") is not None:

@@ -35,7 +35,9 @@ from __future__ import annotations
 
 import datetime as dt
 
-from app import market_calendar
+import streamlit as st
+
+from app import i18n, market_calendar
 
 CURRENT = "current"
 RESTING = "resting"
@@ -116,9 +118,13 @@ def assess(
         # broken while its first pass runs.
         if consecutive_failures >= _FAILURES_BEFORE_NAMING:
             return FAILING, (
-                f"**Nothing has been collected for this symbol yet.** The last "
-                f"{consecutive_failures} attempts failed. It may not be listed with the "
-                "current data source."
+                i18n.t(
+                    f"**Nothing has been collected for this symbol yet.** The last "
+                    f"{consecutive_failures} attempts failed. It may not be listed with the "
+                    "current data source.",
+                    f"**该代码尚未采集到任何数据。**最近 {consecutive_failures} 次尝试全部失败。"
+                    "可能当前数据源没有收录它。",
+                )
             )
         return None
 
@@ -132,9 +138,13 @@ def assess(
     # early warning is the whole value of showing them.
     if consecutive_failures >= _FAILURES_BEFORE_NAMING:
         return FAILING, (
-            f"**Collection for this symbol is failing.** The last {consecutive_failures} "
-            f"attempts were refused; the newest data here is from "
-            f"{age_phrase(reference - last_success)} ago. Other symbols are unaffected."
+            i18n.t(
+                f"**Collection for this symbol is failing.** The last {consecutive_failures} "
+                f"attempts were refused; the newest data here is from "
+                f"{age_phrase(reference - last_success)} ago. Other symbols are unaffected.",
+                f"**该代码的采集正在失败。**最近 {consecutive_failures} 次请求均被拒绝;"
+                f"这里最新的数据是 {age_phrase(reference - last_success)} 前的。其他代码不受影响。",
+            )
         )
 
     if traded <= budget:
@@ -154,16 +164,24 @@ def assess(
             # shipped that version and spent a night showing a healthy green
             # screen with no note on it, after a collection at 15:54 New York.
             return RESTING, (
-                f"Market closed since the last collection "
-                f"({age_phrase(reference - last_success)} ago). The chain does not "
-                "change until the next session."
+                i18n.t(
+                    f"Market closed since the last collection "
+                    f"({age_phrase(reference - last_success)} ago). The chain does not "
+                    "change until the next session.",
+                    f"上次采集之后市场一直休市({age_phrase(reference - last_success)} 前)。"
+                    "下一个交易时段前到期链不会变化。",
+                )
             )
         return None
 
     return STALE, (
-        f"**This data is {age_phrase(reference - last_success)} old.** The market has "
-        f"been open for {age_phrase(dt.timedelta(seconds=traded))} since the last "
-        "successful collection, so this is not the market being closed."
+        i18n.t(
+            f"**This data is {age_phrase(reference - last_success)} old.** The market has "
+            f"been open for {age_phrase(dt.timedelta(seconds=traded))} since the last "
+            "successful collection, so this is not the market being closed.",
+            f"**本数据已滞后 {age_phrase(reference - last_success)}。**自上次成功采集以来"
+            f"市场已开盘 {age_phrase(dt.timedelta(seconds=traded))},所以这不是休市造成的。",
+        )
     )
 
 

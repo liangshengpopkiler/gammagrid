@@ -39,6 +39,9 @@ import time
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import streamlit as st
+
+from app import i18n
 
 log = logging.getLogger(__name__)
 
@@ -261,14 +264,14 @@ def time_to_open_phrase(now: dt.datetime | None = None) -> str:
     """
     minutes = int(seconds_until_open(now) // 60)
     if minutes < 1:
-        return "opening now."
+        return i18n.t("opening now.", "即将开盘。")
     hours, minutes = divmod(minutes, 60)
     if hours >= 24:
         days, hours = divmod(hours, 24)
-        return f"opens in {days}d {hours}h."
+        return f"{i18n.t('opens in', '距开盘')} {days}d {hours}h."
     if hours:
-        return f"opens in {hours}h {minutes:02d}m."
-    return f"opens in {minutes}m."
+        return f"{i18n.t('opens in', '距开盘')} {hours}h {minutes:02d}m."
+    return f"{i18n.t('opens in', '距开盘')} {minutes}m."
 
 
 def status_note(stored_state: str | None, stored_at: str | None,
@@ -299,8 +302,12 @@ def status_note(stored_state: str | None, stored_at: str | None,
         # itself as a calm Sunday.
         return None
     if state_from_clock(reference) == OPEN:
-        return "Market open — the first collection of the session has not landed yet."
-    return f"Market closed — {time_to_open_phrase(reference)} The chain does not change until then."
+        return i18n.t("Market open — the first collection of the session has not landed yet.",
+                      "已开盘 — 本时段的第一次采集还没有落地。")
+    return i18n.t(
+        f"Market closed — {time_to_open_phrase(reference)} The chain does not change until then.",
+        f"市场休市 — {time_to_open_phrase(reference)}在此之前到期链不会变化。",
+    )
 
 
 def _from_provider(provider) -> str | None:

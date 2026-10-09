@@ -919,8 +919,8 @@ with st.sidebar:
     )
     st.caption("Questions or feedback: [hello@gammagrid.io](mailto:hello@gammagrid.io)")
     st.caption(i18n.t(
-        "Based on open-source GammaGrid (AGPL-3.0), with a bilingual layer added.",
-        "基于开源项目 GammaGrid(AGPL-3.0)二次开发,新增中英双语界面。"))
+        "Based on open-source [GammaGrid](https://github.com/gammagrid/gammagrid) (AGPL-3.0) — bilingual fork source: [gammagrid-zh](https://github.com/liangshengpopkiler/gammagrid).",
+        "基于开源项目 [GammaGrid](https://github.com/gammagrid/gammagrid)(AGPL-3.0)二次开发 — 双语修改版源码:[gammagrid-zh](https://github.com/liangshengpopkiler/gammagrid)。"))
     # The revision, in the footer of the sidebar rather than in the header.
     # Every self-hosted installation is a different version — people update
     # when they feel like it and do not remember when — so a screenshot with no
